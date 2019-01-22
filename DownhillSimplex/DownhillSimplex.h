@@ -57,6 +57,7 @@ struct DownhillSimplex {
 			{
 				for (Int j = 0; j<ndim; j++)
 					x[j] = p[i][j];
+
 					y[i] = func(x);
 					MPI_Send(&y[i], 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 					// A¿ wszystkie w¹tki wyœl¹
@@ -108,6 +109,7 @@ struct DownhillSimplex {
 				ytrS = (double)ytry;
 				for (int i = 1; i < size; i++)
 				{
+					
 					// wyslac do slavow ytr, y[inhi] zeby weszly do bloku else if
 					MPI_Send(&ytrS, 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
 					MPI_Send(&inhi, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
@@ -119,33 +121,40 @@ struct DownhillSimplex {
 				}
 				MPI_Barrier(MPI_COMM_WORLD);
 			}
-
 			// Slavy czekaj¹ na mastera
 			if (rank != master)
 			{
+				
 				MPI_Recv(&ytrS, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status);
 				MPI_Recv(&inhi, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 				MPI_Recv(&ilo, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 				MPI_Recv(&yINHI, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status);
 				ytry = (Doub)ytrS;
 				y[inhi] = yINHI;
+				
 				// Slavy odbieraja dane wys³ane przez mastera
 				MPI_Barrier(MPI_COMM_WORLD);
+				
 			}
-		
 			// -------------------------------------------------------------------------
 			// DOT¥D WSZYSTKO DZIA£A SUPER
-			else if (ytry >= y[inhi]) 
-			{		
+
+			if (ytry >= y[inhi]) 
+			{	
+				
 				// Tutaj nie wchodza slavy a powinny maja te wartosci z else ifa --> odtad trzeba naprawic
-				if (rank != master)
-				{
-					cout << ytry << " >= " << y[inhi] << endl;
-				}
-				Doub ysave=y[ihi];
-				ytry=amotry(p,y,psum,ihi,0.5,func);
+				//if (rank == master)
+				//{
+				//cout << "fdssfsd" << endl;
+				//	//cout << ytry << " >= " << y[inhi] << endl;
+				//}
+				
+				Doub ysave=y[inhi];
+				ytry=amotry(p,y,psum,inhi,0.5,func);
 				if (ytry >= ysave)
 				{
+					
+
 					for (Int i=0;i<mpts;i++) 
 					{
 						if (rank == i + 1)
@@ -158,30 +167,46 @@ struct DownhillSimplex {
 								y[i] = func(psum);
 
 								// wysy³anie do mastera y[i]
-								MPI_Send(&y[i], 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+								if (rank != master)
+								{
+									
+									MPI_Send(&y[i], 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+								}
+								
 								// A¿ wszystkie w¹tki wyœl¹
 								MPI_Barrier(MPI_COMM_WORLD);
+								
+
 								break;
 							}
 						}
 					}
-
+					
 					// odbieranie przez mastera wszystkich y[i]
 					if (rank == master)
 					{
+						
 						// A¿ wszystkie w¹tki wyœl¹
+						//
 						MPI_Barrier(MPI_COMM_WORLD);
+						//cout << "fdssfsd" << endl;
 						for (int i = 0; i < size - 1; i++)
 						{
+							
 							MPI_Recv(&y[i], 1, MPI_DOUBLE, i + 1, 0, MPI_COMM_WORLD, &status);
-						};
+						}
+						
 					}
+					
 					nfunc += ndim;
 					get_psum(p, psum);
 					MPI_Barrier(MPI_COMM_WORLD);
+					
 				}
+				
 			}
 			else --nfunc;
+			
 		}
 	}
 	inline void get_psum(MatDoub_I &p, VecDoub_O &psum)
