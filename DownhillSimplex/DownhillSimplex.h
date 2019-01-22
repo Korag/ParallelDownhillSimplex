@@ -43,7 +43,7 @@ struct DownhillSimplex {
 
 		const Int NMAX=5000;
 		const Doub TINY=1.0e-10;
-		Int ihi,ilo,inhi;
+		int ihi,ilo,inhi;
 		mpts=pp.nrows();
 		ndim=pp.ncols();
 		VecDoub psum(ndim),pmin(ndim),x(ndim);
@@ -116,6 +116,7 @@ struct DownhillSimplex {
 					// wyslac wartosc y[inhi] bo slavy nie maja pelnego wektora y
 					double yINHI = y[inhi];
 					MPI_Send(&yINHI, 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
+					MPI_Send(&ihi, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
 				}
 				MPI_Barrier(MPI_COMM_WORLD);
 			}
@@ -127,21 +128,24 @@ struct DownhillSimplex {
 				MPI_Recv(&inhi, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 				MPI_Recv(&ilo, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 				MPI_Recv(&yINHI, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &status);
+				MPI_Recv(&ihi, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
 				ytry = (Doub)ytrS;
 				y[inhi] = yINHI;
 				// Slavy odbieraja dane wys³ane przez mastera
 				MPI_Barrier(MPI_COMM_WORLD);
 			}
 		
-			// -------------------------------------------------------------------------
-			// DOT¥D WSZYSTKO DZIA£A SUPER
-			else if (ytry >= y[inhi]) 
+			if (ytry >= y[inhi]) 
 			{		
 				// Tutaj nie wchodza slavy a powinny maja te wartosci z else ifa --> odtad trzeba naprawic
-				if (rank != master)
+				/*if (rank != master)
 				{
-					cout << ytry << " >= " << y[inhi] << endl;
+					cout << "Jestê slejwe³e: " << rank << endl;
 				}
+				if (rank == master)
+				{
+					cout << "Jestem masterê" << endl;
+				}*/
 				Doub ysave=y[ihi];
 				ytry=amotry(p,y,psum,ihi,0.5,func);
 				if (ytry >= ysave)
@@ -174,7 +178,7 @@ struct DownhillSimplex {
 						for (int i = 0; i < size - 1; i++)
 						{
 							MPI_Recv(&y[i], 1, MPI_DOUBLE, i + 1, 0, MPI_COMM_WORLD, &status);
-						};
+						}
 					}
 					nfunc += ndim;
 					get_psum(p, psum);
